@@ -1,6 +1,8 @@
 import os
 from typing import Tuple, Dict
 
+import cv2
+import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
 from PIL import Image
@@ -28,15 +30,14 @@ class ISICDataset(Dataset):
 
         mask_name = img_name.replace('.jpg', '_segmentation.png')  # to find the same mask
         mask_path = os.path.join(self.mask_dir, mask_name)
-
-        image = Image.open(img_path).convert("L")
-        mask = Image.open(mask_path).convert("L")
+        
+        image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE).astype(np.float32)
 
         if self.transform:
             image = self.transform(image)
         if self.mask_transform:
             mask = self.mask_transform(mask)
-
         return {"image": image,
                 "mask": mask}  # you can return any metadata that may be used in the network here
         
@@ -49,14 +50,34 @@ def get_dataloaders(batch_size: int, shuffle: bool = True,
     """
     train_set = ISICDataset(image_dir="data/ISIC2017/train_set",
                             mask_dir="data/ISIC2017/train_masks",
-                            transform=transform)
+                            transform=transform,
+                            mask_transform=mask_transform)
     
     val_set = ISICDataset(image_dir="data/ISIC2017/val_set",
                           mask_dir="data/ISIC2017/val_masks",
                           transform=transform,
                           mask_transform=mask_transform)
     
-    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
-    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle, num_workers=num_workers)
+    train_loader = DataLoader(train_set, batch_size=batch_size, shuffle=shuffle, 
+                              num_workers=num_workers)
+    val_loader = DataLoader(val_set, batch_size=batch_size, shuffle=shuffle, 
+                            num_workers=num_workers)
 
     return train_loader, val_loader
+
+
+# def collate_fn(batch):
+#     images = []
+#     masks = []
+    
+#     for item in batch:
+#         image = torch.as_tensor(item['image'])
+#         mask = torch.as_tensor(item['mask'])
+        
+#         images.append(image)
+#         masks.append(mask)
+    
+#     images = torch.stack(images, dim=0)
+#     masks = torch.stack(masks, dim=0)
+
+#     return {'image': images, 'mask': masks}
