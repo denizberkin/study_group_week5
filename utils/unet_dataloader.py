@@ -30,14 +30,19 @@ class ISICDataset(Dataset):
 
         mask_name = img_name.replace('.jpg', '_segmentation.png')  # to find the same mask
         mask_path = os.path.join(self.mask_dir, mask_name)
-        
+
         image = cv2.imread(img_path, cv2.IMREAD_GRAYSCALE).astype(np.float32)
         mask = cv2.imread(mask_path, cv2.IMREAD_GRAYSCALE).astype(np.float32)
+        
+        # resize to 256, 256
+        image = cv2.resize(image, dsize=(256, 256))
+        mask = cv2.resize(mask, dsize=(256, 256)) / 255.
 
         if self.transform:
             image = self.transform(image)
         if self.mask_transform:
             mask = self.mask_transform(mask)
+
         return {"image": image,
                 "mask": mask}  # you can return any metadata that may be used in the network here
         
@@ -64,20 +69,3 @@ def get_dataloaders(batch_size: int, shuffle: bool = True,
                             num_workers=num_workers)
 
     return train_loader, val_loader
-
-
-# def collate_fn(batch):
-#     images = []
-#     masks = []
-    
-#     for item in batch:
-#         image = torch.as_tensor(item['image'])
-#         mask = torch.as_tensor(item['mask'])
-        
-#         images.append(image)
-#         masks.append(mask)
-    
-#     images = torch.stack(images, dim=0)
-#     masks = torch.stack(masks, dim=0)
-
-#     return {'image': images, 'mask': masks}
